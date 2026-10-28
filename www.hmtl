@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F1 Workshop Racing Challenge - Ferrari vs McLaren</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+  :root {
+    --ferrari-red: #dc0000;
+    --ferrari-dark: #8b0000;
+    --mclaren-orange: #ff8000;
+    --mclaren-dark: #cc6600;
+    --carbon: #1a1a1a;
+    --asphalt: #2c2c2c;
+    --gold: #ffd700;
+    --green: #00d26a;
+  }
+  body {
+    min-height: 100vh;
+    background: 
+      radial-gradient(ellipse at top, #2c3e50 0%, #0f0f1e 50%, #000 100%);
+    color: #fff;
+    overflow-x: hidden;
+    position: relative;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background-image: 
+      repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(255,255,255,0.02) 35px, rgba(255,255,255,0.02) 70px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .screen {
+    display: none;
+    min-height: 100vh;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+  }
+  .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+  /* ============ MENU SCREEN ============ */
+  #menuScreen {
+    background: 
+      linear-gradient(135deg, rgba(220,0,0,0.15) 0%, rgba(0,0,0,0.8) 50%, rgba(255,128,0,0.15) 100%);
+  }
+  .menu-container {
+    text-align: center;
+    max-width: 1100px;
+    width: 100%;
+  }
+  .main-title {
+    font-size: clamp(2em, 6vw, 4.5em);
+    font-weight: 900;
+    letter-spacing: 3px;
+    background: linear-gradient(90deg, var(--ferrari-red), #fff, var(--mclaren-orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 40px rgba(255,255,255,0.3);
+    margin-bottom: 10px;
+    line-height: 1.1;
+    font-style: italic;
+  }
+  .subtitle {
+    font-size: clamp(0.9em, 2vw, 1.3em);
+    color: #ccc;
+    margin-bottom: 40px;
+    font-style: italic;
+    letter-spacing: 2px;
+  }
+  .cars-display {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin: 30px 0;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .car-card {
+    background: rgba(0,0,0,0.6);
+    border-radius: 20px;
+    padding: 25px;
+    width: 280px;
+    border: 3px solid;
+    transition: transform 0.3s;
+    backdrop-filter: blur(10px);
+  }
+  .car-card:hover { transform: translateY(-5px) scale(1.03); }
+  .car-card.ferrari { border-color: var(--ferrari-red); box-shadow: 0 0 30px rgba(220,0,0,0.5); }
+  .car-card.mclaren { border-color: var(--mclaren-orange); box-shadow: 0 0 30px rgba(255,128,0,0.5); }
+  .car-svg { width: 180px; height: 80px; margin: 10px auto; display: block; }
+  .car-name { font-size: 1.5em; font-weight: bold; margin: 10px 0; letter-spacing: 2px; }
+  .car-card.ferrari .car-name { color: var(--ferrari-red); }
+  .car-card.mclaren .car-name { color: var(--mclaren-orange); }
+  .vs-badge {
+    font-size: 3em;
+    font-weight: 900;
+    color: var(--gold);
+    text-shadow: 0 0 20px var(--gold);
+    font-style: italic;
+  }
+
+  .menu-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+    max-width: 900px;
+    margin: 30px auto;
+  }
+  .btn {
+    padding: 15px 25px;
+    font-size: 1.1em;
+    font-weight: bold;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+  .btn:active { transform: translateY(0); }
+  .btn-start { background: linear-gradient(135deg, var(--ferrari-red), var(--mclaren-orange)); font-size: 1.3em; padding: 20px; }
+  .btn-howto { background: linear-gradient(135deg, #3498db, #2980b9); }
+  .btn-difficulty { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+  .btn-sound { background: linear-gradient(135deg, #2c3e50, #34495e); }
+  .btn-teacher { background: linear-gradient(135deg, #16a085, #27ae60); }
+
+  /* ============ COUNTDOWN ============ */
+  #countdownScreen {
+    background: radial-gradient(circle, #000 0%, #1a0000 100%);
+  }
+  .countdown-display {
+    font-size: clamp(8em, 25vw, 20em);
+    font-weight: 900;
+    font-style: italic;
+    color: var(--ferrari-red);
+    text-shadow: 0 0 50px var(--ferrari-red);
+    animation: countPulse 1s ease;
+  }
+  .countdown-display.go {
+    color: var(--green);
+    text-shadow: 0 0 50px var(--green);
+    font-size: clamp(6em, 20vw, 15em);
+  }
+  @keyframes countPulse {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .start-lights {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+  }
+  .light {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #333;
+    border: 3px solid #555;
+    transition: all 0.3s;
+  }
+  .light.on {
+    background: radial-gradient(circle, #ff0000, #8b0000);
+    box-shadow: 0 0 30px #ff0000;
+  }
+  .light.off {
+    background: #111;
+    box-shadow: none;
+  }
+
+  /* ============ GAME SCREEN ============ */
+  #gameScreen {
+    justify-content: flex-start;
+    padding: 10px;
+  }
+  .game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    max-width: 1400px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .team-score {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 10px 20px;
+    border-radius: 15px;
+    background: rgba(0,0,0,0.7);
+    border: 2px solid;
+    min-width: 200px;
+  }
+  .team-score.ferrari { border-color: var(--ferrari-red); }
+  .team-score.mclaren { border-color: var(--mclaren-orange); }
+  .team-score .team-icon { font-size: 2em; }
+  .team-score .team-info { flex: 1; }
+  .team-score .team-name { font-size: 0.85em; letter-spacing: 2px; font-weight: bold; }
+  .team-score.ferrari .team-name { color: var(--ferrari-red); }
+  .team-score.mclaren .team-name { color: var(--mclaren-orange); }
+  .team-score .team-points { font-size: 1.8em; font-weight: 900; }
+  .team-score.active-turn {
+    animation: teamGlow 1s infinite alternate;
+  }
+  .team-score.ferrari.active-turn { box-shadow: 0 0 25px var(--ferrari-red); }
+  .team-score.mclaren.active-turn { box-shadow: 0 0 25px var(--mclaren-orange); }
+  @keyframes teamGlow {
+    from { transform: scale(1); }
+    to { transform: scale(1.03); }
+  }
+
+  .game-center {
+    text-align: center;
+    padding: 8px 20px;
+    background: rgba(0,0,0,0.7);
+    border-radius: 15px;
+    border: 2px solid var(--gold);
+  }
+  .round-info { font-size: 0.8em; color: var(--gold); letter-spacing: 2px; }
+  .mode-info { font-size: 1em; font-weight: bold; margin-top: 3px; }
+
+  /* Race Track */
+  .race-track-container {
+    width: 100%;
+    max-width: 1400px;
+    background: linear-gradient(to bottom, #1a1a1a, #2c2c2c);
+    border-radius: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 3px solid var(--gold);
+    box-shadow: 0 0 30px rgba(0,0,0,0.8);
+    position: relative;
+    overflow: hidden;
+  }
+  .race-track-container::before {
+    content: '';
+    position: absolute;
+    top:0; left:0; right:0; bottom:0;
+    background-image: 
+      repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.03) 40px, rgba(255,255,255,0.03) 41px);
+    pointer-events: none;
+  }
+  .track-lane {
+    position: relative;
+    height: 70px;
+    background: 
+      repeating-linear-gradient(90deg, #333 0px, #333 30px, #2a2a2a 30px, #2a2a2a 60px);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    border: 2px solid;
+    overflow: hidden;
+  }
+  .track-lane:last-child { margin-bottom: 0; }
+  .track-lane.ferrari-lane { border-color: var(--ferrari-red); }
+  .track-lane.mclaren-lane { border-color: var(--mclaren-orange); }
+  .track-lane::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: repeating-linear-gradient(90deg, #fff 0, #fff 20px, transparent 20px, transparent 40px);
+    opacity: 0.3;
+    transform: translateY(-50%);
+  }
+  .lane-label {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-weight: bold;
+    font-size: 0.85em;
+    letter-spacing: 2px;
+    z-index: 3;
+    background: rgba(0,0,0,0.7);
+    padding: 3px 10px;
+    border-radius: 5px;
+  }
+  .ferrari-lane .lane-label { color: var(--ferrari-red); }
+  .mclaren-lane .lane-label { color: var(--mclaren-orange); }
+  .finish-line {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 25px;
+    height: 100%;
+    background: repeating-linear-gradient(90deg, #fff 0, #fff 5px, #000 5px, #000 10px);
+    z-index: 1;
+  }
+  .finish-flag {
+    position: absolute;
+    right: 30px;
+    top: -5px;
+    font-size: 1.5em;
+    z-index: 2;
+  }
+  .race-car {
+    position: absolute;
+    left: 2%;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 2.5em;
+    transition: left 1s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 2;
+    filter: drop-shadow(3px 3px 5px rgba(0,0,0,0.8));
+  }
+  .race-car.active { animation: engineRev 0.15s infinite alternate; }
+  @keyframes engineRev {
+    from { transform: translateY(-50%) translateX(0); }
+    to { transform: translateY(-52%) translateX(3px); }
+  }
+  .race-car.boost { animation: boost 0.8s ease; }
+  @keyframes boost {
+    0% { transform: translateY(-50%) scale(1); }
+    30% { transform: translateY(-50%) scale(1.2); filter: drop-shadow(0 0 15px gold); }
+    100% { transform: translateY(-50%) scale(1); }
+  }
+  .smoke {
+    position: absolute;
+    top: 50%;
+    font-size: 1.5em;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .smoke.show { animation: smokeAnim 1s ease forwards; }
+  @keyframes smokeAnim {
+    0% { opacity: 0.8; transform: translateY(-50%) scale(0.5); }
+    100% { opacity: 0; transform: translateY(-50%) scale(2) translateX(-50px); }
+  }
+
+  /* Question Box */
+  .question-container {
+    width: 100%;
+    max-width: 1400px;
+    background: rgba(0,0,0,0.8);
+    border-radius: 15px;
+    padding: 20px;
+    border: 2px solid var(--gold);
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  }
+  .question-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .timer-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.6);
+    padding: 8px 15px;
+    border-radius: 10px;
+    border: 2px solid;
+    font-weight: bold;
+    font-size: 1.3em;
+  }
+  .timer-display.ferrari-timer { border-color: var(--ferrari-red); color: var(--ferrari-red); }
+  .timer-display.mclaren-timer { border-color: var(--mclaren-orange); color: var(--mclaren-orange); }
+  .timer-display.warning { animation: timerWarn 0.5s infinite alternate; color: #ff0000 !important; border-color: #ff0000 !important; }
+  @keyframes timerWarn {
+    from { transform: scale(1); }
+    to { transform: scale(1.1); }
+  }
+  .timer-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 5px;
+    margin-bottom: 15px;
+    overflow: hidden;
+  }
+  .timer-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--gold), var(--ferrari-red));
+    transition: width 1s linear;
+    width: 100%;
+  }
+  .mode-badge {
+    background: var(--gold);
+    color: #000;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.85em;
+    letter-spacing: 1px;
+  }
+  .question-text {
+    font-size: clamp(1em, 2.5vw, 1.4em);
+    line-height: 1.5;
+    margin-bottom: 20px;
+    color: #fff;
+    font-weight: 500;
+  }
+  .tool-visual {
+    background: rgba(255,255,255,0.05);
+    border: 2px dashed rgba(255,255,255,0.3);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+    text-align: center;
+  }
+  .tool-icon {
+    font-size: 5em;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .tool-desc {
+    font-style: italic;
+    color: #ccc;
+    font-size: 0.95em;
+  }
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .option-btn {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+    border: 2px solid rgba(255,255,255,0.3);
+    color: #fff;
+    padding: 15px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: left;
+    font-size: clamp(0.9em, 1.8vw, 1.05em);
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+  }
+  .option-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+    transform: translateY(-2px);
+    border-color: var(--gold);
+  }
+  .option-btn .opt-letter {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    text-align: center;
+    background: var(--gold);
+    color: #000;
+    border-radius: 50%;
+    font-weight: bold;
+    margin-right: 10px;
+  }
+  .option-btn.correct {
+    background: linear-gradient(135deg, #27ae60, #2ecc71) !important;
+    border-color: #2ecc71 !important;
+    animation: correctPulse 0.6s;
+  }
+  .option-btn.wrong {
+    background: linear-gradient(135deg, #c0392b, #e74c3c) !important;
+    border-color: #e74c3c !important;
+    animation: shake 0.5s;
+  }
+  @keyframes correctPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); box-shadow: 0 0 25px #2ecc71; }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+  .feedback-box {
+    margin-top: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: bold;
+    display: none;
+    border: 2px solid;
+  }
+  .feedback-box.show { display: block; animation: fadeIn 0.4s; }
+  .feedback-box.correct { background: rgba(39,174,96,0.2); border-color: #27ae60; color: #2ecc71; }
+  .feedback-box.wrong { background: rgba(192,57,43,0.2); border-color: #c0392b; color: #e74c3c; }
+  .feedback-box.timeout { background: rgba(243,156,18,0.2); border-color: #f39c12; color: #f39c12; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Control Buttons */
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .ctrl-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #fff;
+    letter-spacing: 1px;
+    transition: all 0.3s;
+    font-size: 0.9em;
+  }
+  .ctrl-btn:hover { transform: translateY(-2px); }
+  .ctrl-btn.pause { background: #f39c12; }
+  .ctrl-btn.restart { background: #e74c3c; }
+  .ctrl-btn.end { background: #95a5a6; color: #000; }
+  .ctrl-btn.next { background: var(--green); }
+
+  /* ============ MODAL ============ */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .modal-overlay.show { display: flex; animation: fadeIn 0.3s; }
+  .modal {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border-radius: 20px;
+    padding: 30px;
+    max-width: 600px;
+    width: 100%;
+    border: 3px solid var(--gold);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h2 {
+    color: var(--gold);
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 1.8em;
+    letter-spacing: 2px;
+  }
+  .modal p, .modal li {
+    line-height: 1.7;
+    margin-bottom: 10px;
+    color: #ddd;
+  }
+  .modal ul { padding-left: 20px; }
+  .modal .close-btn {
+    background: var(--gold);
+    color: #000;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 15px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Difficulty Options */
+  .diff-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin: 20px 0;
+  }
+  .diff-card {
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,255,255,0.2);
+    padding: 20px;
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+  }
+  .diff-card:hover { transform: translateY(-3px); }
+  .diff-card.selected { border-color: var(--gold); background: rgba(255,215,0,0.1); }
+  .diff-card .diff-icon { font-size: 2.5em; margin-bottom: 10px; }
+  .diff-card .diff-name { font-size: 1.3em; font-weight: bold; margin-bottom: 5px; }
+  .diff-card .diff-desc { font-size: 0.85em; color: #aaa; }
+
+  /* Teacher Mode */
+  .teacher-panel {
+    background: rgba(22,160,133,0.1);
+    border: 2px solid #16a085;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 15px 0;
+  }
+  .teacher-panel h3 { color: #16a085; margin-bottom: 10px; }
+  .teacher-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .teacher-row label { font-weight: bold; }
+  .teacher-row select, .teacher-row input {
+    padding: 5px 10px;
+    border-radius: 5px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: 1px solid #16a085;
+  }
+
+  /* ============ RESULT SCREEN ============ */
+  #resultScreen {
+    background: radial-gradient(circle at center, #1a1a2e 0%, #000 100%);
+  }
+  .result-container {
+    text-align: center;
+    max-width: 900px;
+    width: 100%;
+  }
+  .result-title {
+    font-size: clamp(2em, 6vw, 4em);
+    font-weight: 900;
+    letter-spacing: 3px;
+    font-style: italic;
+    background: linear-gradient(90deg, var(--gold), #fff, var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 20px;
+    animation: resultShine 2s infinite;
+  }
+  @keyframes resultShine {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.3); }
+  }
+  .podium {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 20px;
+    margin: 30px 0;
+    flex-wrap: wrap;
+  }
+  .podium-step {
+    background: rgba(0,0,0,0.6);
+    border-radius: 15px;
+    padding: 20px;
+    width: 280px;
+    border: 3px solid;
+    transition: transform 0.3s;
+  }
+  .podium-step.winner {
+    transform: scale(1.1);
+    box-shadow: 0 0 40px;
+    animation: winnerPulse 1.5s infinite alternate;
+  }
+  @keyframes winnerPulse {
+    from { box-shadow: 0 0 30px; }
+    to { box-shadow: 0 0 60px; }
+  }
+  .podium-step.ferrari { border-color: var(--ferrari-red); }
+  .podium-step.mclaren { border-color: var(--mclaren-orange); }
+  .podium-step.ferrari.winner { box-shadow: 0 0 40px var(--ferrari-red); }
+  .podium-step.mclaren.winner { box-shadow: 0 0 40px var(--mclaren-orange); }
+  .podium-rank { font-size: 3em; margin-bottom: 10px; }
+  .podium-team { font-size: 1.5em; font-weight: bold; letter-spacing: 2px; margin: 10px 0; }
+  .podium-step.ferrari .podium-team { color: var(--ferrari-red); }
+  .podium-step.mclaren .podium-team { color: var(--mclaren-orange); }
+  .podium-stats {
+    text-align: left;
+    margin-top: 15px;
+    font-size: 0.95em;
+  }
+  .podium-stats div {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .podium-stats .stat-value { font-weight: bold; color: var(--gold); }
+
+  .result-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  }
+
+  /* Confetti */
+  .confetti {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    top: -10px;
+    z-index: 999;
+    animation: confettiFall linear forwards;
+    pointer-events: none;
+  }
+  @keyframes confettiFall {
+    to {
+      transform: translateY(110vh) rotate(720deg);
+      opacity: 0;
+    }
+  }
+
+  /* Review Screen */
+  .review-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 10px;
+  }
+  .review-item {
+    background: rgba(255,255,255,0.05);
+    border-left: 4px solid;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+  }
+  .review-item.correct-review { border-color: #27ae60; }
+  .review-item.wrong-review { border-color: #c0392b; }
+  .review-item .review-q { font-weight: bold; margin-bottom: 5px; }
+  .review-item .review-a { font-size: 0.9em; color: #aaa; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .options-grid { grid-template-columns: 1fr; }
+    .diff-options { grid-template-columns: 1fr; }
+    .car-card { width: 100%; max-width: 300px; }
+    .team-score { min-width: 150px; padding: 8px 12px; }
+    .team-score .team-points { font-size: 1.3em; }
+    .race-car { font-size: 2em; }
+    .track-lane { height: 60px; }
+    .podium-step { width: 100%; max-width: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ MENU SCREEN ============ -->
+<div class="screen active" id="menuScreen">
+  <div class="menu-container">
+    <h1 class="main-title">F1 WORKSHOP<br>RACING CHALLENGE</h1>
+    <p class="subtitle">Learn English. Master the Tools. Win the Race!</p>
+    
+    <div class="cars-display">
+      <div class="car-card ferrari">
+        <svg class="car-svg" viewBox="0 0 200 80">
+          <path d="M 10 55 Q 20 35 50 30 L 90 25 Q 120 20 150 30 L 180 40 Q 190 45 190 55 L 190 60 L 10 60 Z" fill="#dc0000" stroke="#000" stroke-width="1"/>
+          <path d="M 60 30 L 85 25 L 110 25 L 115 40 L 55 40 Z" fill="#1a1a1a" opacity="0.7"/>
+          <circle cx="45" cy="62" r="12" fill="#000"/>
+          <circle cx="45" cy="62" r="6" fill="#555"/>
+          <circle cx="155" cy="62" r="12" fill="#000"/>
+          <circle cx="155" cy="62" r="6" fill="#555"/>
+          <rect x="175" y="35" width="8" height="15" fill="#ff0" opacity="0.8"/>
+        </svg>
+        <div class="car-name">TEAM FERRARI</div>
+        <div style="color:#aaa; font-size:0.9em;">🔴 The Prancing Horse</div>
+      </div>
+      <div class="vs-badge">VS</div>
+      <div class="car-card mclaren">
+        <svg class="car-svg" viewBox="0 0 200 80">
+          <path d="M 10 55 Q 20 35 50 30 L 90 25 Q 120 20 150 30 L 180 40 Q 190 45 190 55 L 190 60 L 10 60 Z" fill="#ff8000" stroke="#000" stroke-width="1"/>
+          <path d="M 60 30 L 85 25 L 110 25 L 115 40 L 55 40 Z" fill="#1a1a1a" opacity="0.7"/>
+          <circle cx="45" cy="62" r="12" fill="#000"/>
+          <circle cx="45" cy="62" r="6" fill="#555"/>
+          <circle cx="155" cy="62" r="12" fill="#000"/>
+          <circle cx="155" cy="62" r="6" fill="#555"/>
+          <rect x="175" y="35" width="8" height="15" fill="#ff0" opacity="0.8"/>
+        </svg>
+        <div class="car-name">TEAM McLAREN</div>
+        <div style="color:#aaa; font-size:0.9em;">🟠 The Papaya Team</div>
+      </div>
+    </div>
+
+    <div class="menu-buttons">
+      <button class="btn btn-start" onclick="startRace()">🏁 START RACE</button>
+      <button class="btn btn-howto" onclick="showModal('howtoModal')">📖 HOW TO PLAY</button>
+      <button class="btn btn-difficulty" onclick="showModal('difficultyModal')">⚙️ DIFFICULTY</button>
+      <button class="btn btn-sound" onclick="toggleSound()" id="soundBtn">🔊 SOUND ON</button>
+      <button class="btn btn-teacher" onclick="showModal('teacherModal')">👨‍🏫 TEACHER MODE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ COUNTDOWN SCREEN ============ -->
+<div class="screen" id="countdownScreen">
+  <div class="start-lights">
+    <div class="light" id="light1"></div>
+    <div class="light" id="light2"></div>
+    <div class="light" id="light3"></div>
+    <div class="light" id="light4"></div>
+    <div class="light" id="light5"></div>
+  </div>
+  <div class="countdown-display" id="countdownText">3</div>
+</div>
+
+<!-- ============ GAME SCREEN ============ -->
+<div class="screen" id="gameScreen">
+  <div class="game-header">
+    <div class="team-score ferrari" id="ferrariScore">
+      <div class="team-icon">🔴</div>
+      <div class="team-info">
+        <div class="team-name">FERRARI</div>
+        <div class="team-points" id="ferrariPoints">0</div>
+      </div>
+    </div>
+    <div class="game-center">
+      <div class="round-info" id="roundInfo">ROUND 1 / 10</div>
+      <div class="mode-info" id="currentTeamTurn">FERRARI'S TURN</div>
+    </div>
+    <div class="team-score mclaren" id="mclarenScore">
+      <div class="team-icon">🟠</div>
+      <div class="team-info">
+        <div class="team-name">McLAREN</div>
+        <div class="team-points" id="mclarenPoints">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="race-track-container">
+    <div class="track-lane ferrari-lane">
+      <div class="lane-label">FERRARI</div>
+      <div class="finish-line"></div>
+      <div class="finish-flag">🏁</div>
+      <div class="race-car" id="carFerrari">
+        <svg width="70" height="30" viewBox="0 0 200 80">
+          <path d="M 10 55 Q 20 35 50 30 L 90 25 Q 120 20 150 30 L 180 40 Q 190 45 190 55 L 190 60 L 10 60 Z" fill="#dc0000" stroke="#000" stroke-width="2"/>
+          <path d="M 60 30 L 85 25 L 110 25 L 115 40 L 55 40 Z" fill="#1a1a1a" opacity="0.8"/>
+          <circle cx="45" cy="62" r="12" fill="#000"/>
+          <circle cx="45" cy="62" r="6" fill="#555"/>
+          <circle cx="155" cy="62" r="12" fill="#000"/>
+          <circle cx="155" cy="62" r="6" fill="#555"/>
+        </svg>
+      </div>
+      <div class="smoke" id="smokeFerrari">💨</div>
+    </div>
+    <div class="track-lane mclaren-lane">
+      <div class="lane-label">McLAREN</div>
+      <div class="finish-line"></div>
+      <div class="finish-flag">🏁</div>
+      <div class="race-car" id="carMclaren">
+        <svg width="70" height="30" viewBox="0 0 200 80">
+          <path d="M 10 55 Q 20 35 50 30 L 90 25 Q 120 20 150 30 L 180 40 Q 190 45 190 55 L 190 60 L 10 60 Z" fill="#ff8000" stroke="#000" stroke-width="2"/>
+          <path d="M 60 30 L 85 25 L 110 25 L 115 40 L 55 40 Z" fill="#1a1a1a" opacity="0.8"/>
+          <circle cx="45" cy="62" r="12" fill="#000"/>
+          <circle cx="45" cy="62" r="6" fill="#555"/>
+          <circle cx="155" cy="62" r="12" fill="#000"/>
+          <circle cx="155" cy="62" r="6" fill="#555"/>
+        </svg>
+      </div>
+      <div class="smoke" id="smokeMclaren">💨</div>
+    </div>
+  </div>
+
+  <div class="question-container">
+    <div class="question-header">
+      <div class="timer-display ferrari-timer" id="timerDisplay">
+        ⏱️ <span id="timerValue">15</span>s
+      </div>
+      <div class="mode-badge" id="modeBadge">MODE 1: TOOL QUIZ</div>
+    </div>
+    <div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
+    <div class="question-text" id="questionText">Loading question...</div>
+    <div class="tool-visual" id="toolVisual" style="display:none;">
+      <span class="tool-icon" id="toolIcon">🔧</span>
+      <div class="tool-desc" id="toolDesc"></div>
+    </div>
+    <div class="options-grid" id="optionsGrid"></div>
+    <div class="feedback-box" id="feedbackBox"></div>
+    <div class="controls">
+      <button class="ctrl-btn next" id="nextBtn" onclick="nextQuestion()" style="display:none;">NEXT ➡️</button>
+      <button class="ctrl-btn pause" onclick="togglePause()" id="pauseBtn">⏸️ PAUSE</button>
+      <button class="ctrl-btn restart" onclick="confirmRestart()">🔄 RESTART</button>
+      <button class="ctrl-btn end" onclick="confirmEnd()">🏁 END RACE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ RESULT SCREEN ============ -->
+<div class="screen" id="resultScreen">
+  <div class="result-container">
+    <h1 class="result-title">🏁 RACE FINISHED! 🏁</h1>
+    <div id="championText" style="font-size:1.5em; margin-bottom:20px; color:var(--gold); font-weight:bold;"></div>
+    
+    <div class="podium">
+      <div class="podium-step ferrari" id="podiumFerrari">
+        <div class="podium-rank" id="ferrariRank">🥇</div>
+        <div class="podium-team">TEAM FERRARI</div>
+        <div class="podium-stats">
+          <div><span>Points:</span><span class="stat-value" id="ferrariFinalPoints">0</span></div>
+          <div><span>Distance:</span><span class="stat-value" id="ferrariDistance">0%</span></div>
+          <div><span>Correct:</span><span class="stat-value" id="ferrariCorrect">0/0</span></div>
+          <div><span>Accuracy:</span><span class="stat-value" id="ferrariAccuracy">0%</span></div>
+        </div>
+      </div>
+      <div class="podium-step mclaren" id="podiumMclaren">
+        <div class="podium-rank" id="mclarenRank">🥈</div>
+        <div class="podium-team">TEAM McLAREN</div>
+        <div class="podium-stats">
+          <div><span>Points:</span><span class="stat-value" id="mclarenFinalPoints">0</span></div>
+          <div><span>Distance:</span><span class="stat-value" id="mclarenDistance">0%</span></div>
+          <div><span>Correct:</span><span class="stat-value" id="mclarenCorrect">0/0</span></div>
+          <div><span>Accuracy:</span><span class="stat-value" id="mclarenAccuracy">0%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-buttons">
+      <button class="btn btn-start" onclick="playAgain()">🔄 PLAY AGAIN</button>
+      <button class="btn btn-howto" onclick="showReview()">📋 REVIEW ANSWERS</button>
+      <button class="btn btn-difficulty" onclick="backToMenu()">🏠 MAIN MENU</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODALS ============ -->
+<div class="modal-overlay" id="howtoModal">
+  <div class="modal">
+    <h2>📖 HOW TO PLAY</h2>
+    <p><b>Selamat datang di F1 Workshop Racing Challenge!</b></p>
+    <ul>
+      <li>Game dimainkan oleh 2 tim: <b style="color:var(--ferrari-red)">TEAM FERRARI 🔴</b> dan <b style="color:var(--mclaren-orange)">TEAM McLAREN 🟠</b>.</li>
+      <li>Kedua tim bermain <b>bergantian</b> menjawab pertanyaan bahasa Inggris tentang <b>alat-alat bengkel otomotif</b>.</li>
+      <li>Setiap jawaban <b>BENAR</b> mendapat poin dan membuat mobil melaju di lintasan.</li>
+      <li>Jawaban <b>SALAH</b> atau <b>habis waktu</b> = tidak dapat poin, giliran berpindah.</li>
+      <li>Tim pertama yang mencapai garis finis atau memiliki skor tertinggi setelah semua soal selesai adalah <b>JUARA</b>! 🏆</li>
+    </ul>
+    <h3 style="color:var(--gold); margin:15px 0 10px;">🎮 3 MODE TANTANGAN:</h3>
+    <ul>
+      <li><b>MODE 1 - TOOL QUIZ</b> (100 poin): Pilih jawaban benar dari 4 pilihan.</li>
+      <li><b>MODE 2 - GUESS THE TOOL</b> (150 poin): Tebak nama alat dari ilustrasi & deskripsi.</li>
+      <li><b>MODE 3 - PIT STOP CHALLENGE</b> (200 poin): Pilih alat yang tepat untuk skenario tertentu.</li>
+    </ul>
+    <button class="close-btn" onclick="hideModal('howtoModal')">GOT IT!</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="difficultyModal">
+  <div class="modal">
+    <h2>⚙️ SELECT DIFFICULTY</h2>
+    <div class="diff-options">
+      <div class="diff-card" data-diff="easy" onclick="selectDifficulty('easy')">
+        <div class="diff-icon">🟢</div>
+        <div class="diff-name">EASY</div>
+        <div class="diff-desc">20 detik/soal<br>8 pertanyaan<br>Mode 1 saja</div>
+      </div>
+      <div class="diff-card selected" data-diff="medium" onclick="selectDifficulty('medium')">
+        <div class="diff-icon">🟡</div>
+        <div class="diff-name">MEDIUM</div>
+        <div class="diff-desc">15 detik/soal<br>10 pertanyaan<br>Mode 1 & 2</div>
+      </div>
+      <div class="diff-card" data-diff="hard" onclick="selectDifficulty('hard')">
+        <div class="diff-icon">🔴</div>
+        <div class="diff-name">HARD</div>
+        <div class="diff-desc">12 detik/soal<br>14 pertanyaan<br>Semua mode</div>
+      </div>
+    </div>
+    <button class="close-btn" onclick="hideModal('difficultyModal')">SAVE</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="teacherModal">
+  <div class="modal">
+    <h2>👨‍🏫 TEACHER MODE</h2>
+    <div class="teacher-panel">
+      <h3>⚙️ Game Settings</h3>
+      <div class="teacher-row">
+        <label>Timer per soal:</label>
+        <select id="teacherTimer">
+          <option value="10">10 detik</option>
+          <option value="15" selected>15 detik</option>
+          <option value="20">20 detik</option>
+          <option value="30">30 detik</option>
+        </select>
+      </div>
+      <div class="teacher-row">
+        <label>Jumlah soal:</label>
+        <select id="teacherQuestions">
+          <option value="6">6 soal</option>
+          <option value="10" selected>10 soal</option>
+          <option value="14">14 soal</option>
+          <option value="20">20 soal</option>
+        </select>
+      </div>
+      <div class="teacher-row">
+        <label>Mode soal:</label>
+        <select id="teacherMode">
+          <option value="all" selected>Semua mode (campur)</option>
+          <option value="1">Mode 1 saja (Quiz)</option>
+          <option value="2">Mode 2 saja (Guess)</option>
+          <option value="3">Mode 3 saja (Pit Stop)</option>
+        </select>
+      </div>
+      <div class="teacher-row">
+        <label>Urutan giliran:</label>
+        <select id="teacherTurn">
+          <option value="alternate" selected>Bergantian (F-M-F-M)</option>
+          <option value="ferrari">Ferrari dulu semua</option>
+          <option value="mclaren">McLaren dulu semua</option>
+        </select>
+      </div>
+    </div>
+    <div class="teacher-panel">
+      <h3>📚 Answer Key Preview</h3>
+      <p style="font-size:0.9em;">Seluruh kunci jawaban & penjelasan akan muncul di layar REVIEW setelah game selesai.</p>
+    </div>
+    <button class="close-btn" onclick="saveTeacherSettings()">💾 SAVE SETTINGS</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="reviewModal">
+  <div class="modal">
+    <h2>📋 REVIEW ANSWERS</h2>
+    <div class="review-list" id="reviewList"></div>
+    <button class="close-btn" onclick="hideModal('reviewModal')">CLOSE</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="pauseModal">
+  <div class="modal">
+    <h2>⏸️ RACE PAUSED</h2>
+    <p style="text-align:center;">Balapan sedang dijeda. Timer dihentikan sementara.</p>
+    <button class="close-btn" onclick="togglePause()">▶️ RESUME RACE</button>
+  </div>
+</div>
+
+<script>
+// ============ QUESTION BANK ============
+const questionBank = [
+  // MODE 1: TOOL KNOWLEDGE QUIZ (100 points)
+  {
+    mode: 1, points: 100,
+    q: "Which tool is used to tighten or loosen nuts and bolts?",
+    options: ["Hammer", "Wrench", "Hacksaw", "Pliers"],
+    answer: 1,
+    explain: "A WRENCH is specifically designed to tighten or loosen nuts and bolts by gripping their flat surfaces."
+  },
+  {
+    mode: 1, points: 100,
+    q: "What tool is used to measure tire pressure?",
+    options: ["Tire Pressure Gauge", "Screwdriver", "Spanner", "File"],
+    answer: 0,
+    explain: "A TIRE PRESSURE GAUGE measures the air pressure inside tires in PSI or BAR units."
+  },
+  {
+    mode: 1, points: 100,
+    q: "Which tool is used to lift a car off the ground?",
+    options: ["Socket Wrench", "Floor Jack", "Pliers", "Oil Filter Wrench"],
+    answer: 1,
+    explain: "A FLOOR JACK is a hydraulic device used to lift vehicles for maintenance and repair work."
+  },
+  {
+    mode: 1, points: 100,
+    q: "What tool is used to remove and install screws?",
+    options: ["Screwdriver", "Hammer", "Caliper", "Torque Wrench"],
+    answer: 0,
+    explain: "A SCREWDRIVER has a tip that fits into the screw head to turn it clockwise (tighten) or counterclockwise (loosen)."
+  },
+  {
+    mode: 1, points: 100,
+    q: "Which tool is used to measure and apply a specific tightening torque to a bolt?",
+    options: ["Combination Wrench", "Torque Wrench", "Adjustable Pliers", "Rubber Mallet"],
+    answer: 1,
+    explain: "A TORQUE WRENCH allows mechanics to apply a precise amount of torque, critical for engine and wheel bolts."
+  },
+  {
+    mode: 1, points: 100,
+    q: "What is the function of a VERNIER CALIPER?",
+    options: ["Cut metal", "Measure precise dimensions", "Tighten bolts", "Lift vehicles"],
+    answer: 1,
+    explain: "A VERNIER CALIPER measures internal, external dimensions and depth with high precision (up to 0.02mm)."
+  },
+  {
+    mode: 1, points: 100,
+    q: "Which tool is used to check small gaps between two parts?",
+    options: ["Micrometer", "Feeler Gauge", "Multimeter", "Funnel"],
+    answer: 1,
+    explain: "A FEELER GAUGE consists of thin metal strips of different thicknesses used to measure gap widths (e.g., spark plug gaps)."
+  },
+  {
+    mode: 1, points: 100,
+    q: "What does a MULTIMETER measure?",
+    options: ["Torque", "Voltage, current, and resistance", "Tire pressure", "Oil level"],
+    answer: 1,
+    explain: "A MULTIMETER is an electrical instrument that measures voltage (V), current (A), and resistance (Ω)."
+  },
+  {
+    mode: 1, points: 100,
+    q: "Which tool provides compressed air for pneumatic tools?",
+    options: ["Air Compressor", "Hydraulic Lift", "Grease Gun", "Workbench"],
+    answer: 0,
+    explain: "An AIR COMPRESSOR converts power into pressurized air to power impact wrenches, spray guns, and other pneumatic tools."
+  },
+  {
+    mode: 1, points: 100,
+    q: "What is the purpose of WHEEL CHOCKS?",
+    options: ["Clean wheels", "Prevent vehicle from rolling", "Tighten lug nuts", "Measure wheel size"],
+    answer: 1,
+    explain: "WHEEL CHOCKS are wedge-shaped blocks placed against wheels to prevent the vehicle from rolling during service."
+  },
+
+  // MODE 2: GUESS THE TOOL (150 points)
+  {
+    mode: 2, points: 150,
+    q: "Identify this tool: It has a long handle with a socket at one end, used to turn bolts and nuts quickly.",
+    icon: "🔧",
+    desc: "A common hand tool with an L-shape or T-shape, often used with various socket sizes.",
+    options: ["Socket Wrench", "Hammer", "File", "Chisel"],
+    answer: 0,
+    explain: "A SOCKET WRENCH (or ratchet) allows quick turning of bolts without removing the tool from the fastener."
+  },
+  {
+    mode: 2, points: 150,
+    q: "Identify this tool: It has a heavy metal head and a handle, used for striking nails or shaping metal.",
+    icon: "🔨",
+    desc: "One of the oldest tools in the workshop, essential for driving nails.",
+    options: ["Pliers", "Hammer", "Wrench", "Screwdriver"],
+    answer: 1,
+    explain: "A HAMMER is used for driving nails, fitting parts, and breaking objects. The most common type is the claw hammer."
+  },
+  {
+    mode: 2, points: 150,
+    q: "Identify this tool: It has two flat jaws and is used to grip, bend, or cut wires.",
+    icon: "🔩",
+    desc: "A hand tool with pivoting jaws, often with insulated handles for electrical safety.",
+    options: ["Wrench", "Hammer", "Pliers", "File"],
+    answer: 2,
+    explain: "PLIERS are gripping tools with flat jaws. Combination pliers can also cut wires."
+  },
+  {
+    mode: 2, points: 150,
+    q: "Identify this tool: It has a threaded rod with a micrometric scale, used to measure very small dimensions precisely.",
+    icon: "📏",
+    desc: "More precise than a caliper, accurate up to 0.01mm, commonly used in engine work.",
+    options: ["Feeler Gauge", "Micrometer", "Ruler", "Vernier Caliper"],
+    answer: 1,
+    explain: "A MICROMETER provides extremely precise measurements (0.01mm) using a calibrated screw mechanism."
+  },
+  {
+    mode: 2, points: 150,
+    q: "Identify this tool: It is a power tool that spins a drill bit to make holes in metal, wood, or plastic.",
+    icon: "⚡",
+    desc: "Can be electric or pneumatic, essential for making holes in workshop materials.",
+    options: ["Drill", "Air Compressor", "Grinder", "Lathe"],
+    answer: 0,
+    explain: "A DRILL is a powered tool used with drill bits to create round holes in various materials."
+  },
+  {
+    mode: 2, points: 150,
+    q: "Identify this tool: It is a hand tool with a flat, abrasive surface used to smooth or shape metal.",
+    icon: "🪚",
+    desc: "Used for removing small amounts of material from a workpiece by abrasion.",
+    options: ["File", "Chisel", "Hacksaw", "Wrench"],
+    answer: 0,
+    explain: "A FILE is an abrasive tool used for fine shaping, smoothing, and deburring metal surfaces."
+  },
+  {
+    mode: 2, points: 150,
+    q: "Identify this tool: It is a long-handled tool with a sharp blade, used for cutting metal pipes and rods.",
+    icon: "🪚",
+    desc: "Works like a saw but specifically designed for cutting through metal.",
+    options: ["Hacksaw", "File", "Chisel", "Pliers"],
+    answer: 0,
+    explain: "A HACKSAW has a fine-toothed blade designed specifically for cutting metal materials."
+  },
+
+  // MODE 3: PIT STOP CHALLENGE (200 points)
+  {
+    mode: 3, points: 200,
+    q: "🏎️ PIT STOP: The car has a flat tire. Which tool do you need FIRST to lift the car safely?",
+    icon: "🛞",
+    desc: "Scenario: Changing a tire during a pit stop.",
+    options: ["Floor Jack", "Screwdriver", "Hammer", "File"],
+    answer: 0,
+    explain: "A FLOOR JACK is the first tool needed to safely lift the vehicle before removing the wheel."
+  },
+  {
+    mode: 3, points: 200,
+    q: "🏎️ PIT STOP: After lifting the car, what should you use to SUPPORT the vehicle safely while working underneath?",
+    icon: "🔧",
+    desc: "Safety is critical — never rely only on a jack!",
+    options: ["Jack Stand", "Floor Jack", "Wheel Chocks", "Hydraulic Lift"],
+    answer: 0,
+    explain: "JACK STANDS must be used to support the vehicle after lifting. Never work under a car supported only by a jack!"
+  },
+  {
+    mode: 3, points: 200,
+    q: "🏎️ PIT STOP: The engine oil needs to be changed. Which tool helps pour new oil without spilling?",
+    icon: "🛢️",
+    desc: "Scenario: Routine oil change service.",
+    options: ["Funnel", "Hammer", "Pliers", "File"],
+    answer: 0,
+    explain: "A FUNNEL directs oil into the engine's fill hole cleanly, preventing spills and waste."
+  },
+  {
+    mode: 3, points: 200,
+    q: "🏎️ PIT STOP: The wheel bolts need to be tightened to the manufacturer's exact specification. Which tool?",
+    icon: "⚙️",
+    desc: "Scenario: Final wheel installation before the car returns to the track.",
+    options: ["Torque Wrench", "Regular Wrench", "Pliers", "Hammer"],
+    answer: 0,
+    explain: "A TORQUE WRENCH ensures wheel bolts are tightened to the exact specification, preventing loosening or damage."
+  },
+  {
+    mode: 3, points: 200,
+    q: "🏎️ PIT STOP: The spark plug gap needs to be checked and adjusted. Which tool measures this tiny gap?",
+    icon: "⚡",
+    desc: "Scenario: Engine tune-up during maintenance.",
+    options: ["Feeler Gauge", "Ruler", "Micrometer", "Caliper"],
+    answer: 0,
+    explain: "A FEELER GAUGE is perfect for checking the small gap between spark plug electrodes."
+  },
+  {
+    mode: 3, points: 200,
+    q: "🏎️ PIT STOP: The mechanic needs to lubricate suspension joints. Which tool injects grease precisely?",
+    icon: "💧",
+    desc: "Scenario: Chassis lubrication service.",
+    options: ["Grease Gun", "Funnel", "Oil Can", "Pliers"],
+    answer: 0,
+    explain: "A GREASE GUN forces grease through a nozzle into grease fittings (zerk fittings) on suspension and steering components."
+  },
+  {
+    mode: 3, points: 200,
+    q: "🏎️ PIT STOP: Before working under the car, what should be placed against the wheels to prevent rolling?",
+    icon: "🚧",
+    desc: "Scenario: Safety preparation before any under-car work.",
+    options: ["Wheel Chocks", "Floor Jack", "Torque Wrench", "Hammer"],
+    answer: 0,
+    explain: "WHEEL CHOCKS must be placed against the wheels opposite to the ones being worked on, as a critical safety measure."
+  },
+  {
+    mode: 3, points: 200,
+    q: "🏎️ PIT STOP: The car's battery is dead. Which tool diagnoses electrical problems?",
+    icon: "🔋",
+    desc: "Scenario: Electrical system diagnosis.",
+    options: ["Multimeter", "Hammer", "Wrench", "File"],
+    answer: 0,
+    explain: "A MULTIMETER measures battery voltage, checks circuits, and diagnoses electrical issues in the vehicle."
+  }
+];
+
+// ============ GAME STATE ============
+let gameState = {
+  difficulty: 'medium',
+  timer: 15,
+  totalQuestions: 10,
+  modeFilter: 'all',
+  turnOrder: 'alternate',
+  soundOn: true,
+  currentTeam: 'ferrari', // 'ferrari' or 'mclaren'
+  ferrariScore: 0,
+  mclarenScore: 0,
+  ferrariCorrect: 0,
+  mclarenCorrect: 0,
+  ferrariAttempts: 0,
+  mclarenAttempts: 0,
+  ferrariPosition: 0, // percentage 0-100
+  mclarenPosition: 0,
+  currentQuestionIndex: 0,
+  questions: [],
+  timerInterval: null,
+  timeLeft: 15,
+  isPaused: false,
+  answered: false,
+  history: [] // for review
+};
+
+// ============ AUDIO (Web Audio API - Offline) ============
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+}
+function playTone(freq, duration, type = 'sine', volume = 0.3) {
+  if (!gameState.soundOn || !audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  } catch(e) {}
+}
+function playCorrectSound() {
+  playTone(523, 0.15, 'sine', 0.3);
+  setTimeout(() => playTone(659, 0.15, 'sine', 0.3), 100);
+  setTimeout(() => playTone(784, 0.3, 'sine', 0.3), 200);
+}
+function playWrongSound() {
+  playTone(200, 0.2, 'sawtooth', 0.2);
+  setTimeout(() => playTone(150, 0.3, 'sawtooth', 0.2), 150);
+}
+function playTickSound() { playTone(800, 0.05, 'square', 0.1); }
+function playCountdownBeep() { playTone(440, 0.2, 'sine', 0.3); }
+function playGoSound() {
+  playTone(880, 0.15, 'sine', 0.4);
+  setTimeout(() => playTone(1175, 0.3, 'sine', 0.4), 100);
+}
+function playEngineSound() {
+  if (!gameState.soundOn || !audioCtx) return;
+  try {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.6);
+  } catch(e) {}
+}
+function playVictorySound() {
+  const notes = [523, 659, 784, 1047, 784, 1047];
+  notes.forEach((n, i) => setTimeout(() => playTone(n, 0.2, 'sine', 0.3), i * 150));
+}
+
+// ============ SCREEN MANAGEMENT ============
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showModal(id) { document.getElementById(id).classList.add('show'); }
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ============ DIFFICULTY ============
+function selectDifficulty(diff) {
+  document.querySelectorAll('.diff-card').forEach(c => c.classList.remove('selected'));
+  document.querySelector(`[data-diff="${diff}"]`).classList.add('selected');
+  gameState.difficulty = diff;
+  if (diff === 'easy') { gameState.timer = 20; gameState.totalQuestions = 8; }
+  else if (diff === 'medium') { gameState.timer = 15; gameState.totalQuestions = 10; }
+  else { gameState.timer = 12; gameState.totalQuestions = 14; }
+}
+
+// ============ TEACHER MODE ============
+function saveTeacherSettings() {
+  gameState.timer = parseInt(document.getElementById('teacherTimer').value);
+  gameState.totalQuestions = parseInt(document.getElementById('teacherQuestions').value);
+  gameState.modeFilter = document.getElementById('teacherMode').value;
+  gameState.turnOrder = document.getElementById('teacherTurn').value;
+  hideModal('teacherModal');
+  alert('✅ Teacher settings saved!');
+}
+
+// ============ SOUND TOGGLE ============
+function toggleSound() {
+  initAudio();
+  gameState.soundOn = !gameState.soundOn;
+  document.getElementById('soundBtn').innerHTML = gameState.soundOn ? '🔊 SOUND ON' : '🔇 SOUND OFF';
+  if (gameState.soundOn) playTone(600, 0.1, 'sine', 0.2);
+}
+
+// ============ START RACE ============
+function startRace() {
+  initAudio();
+  showScreen('countdownScreen');
+  runCountdown();
+}
+
+function runCountdown() {
+  const lights = ['light1', 'light2', 'light3', 'light4', 'light5'];
+  const text = document.getElementById('countdownText');
+  let step = 0;
+  
+  // Reset
+  lights.forEach(id => document.getElementById(id).classList.remove('on', 'off'));
+  text.textContent = '3';
+  text.classList.remove('go');
+  
+  const interval = setInterval(() => {
+    step++;
+    if (step <= 5) {
+      document.getElementById(lights[step-1]).classList.add('on');
+      playCountdownBeep();
+      if (step === 1) text.textContent = '3';
+      else if (step === 2) text.textContent = '2';
+      else if (step === 3) text.textContent = '1';
+      else if (step === 4) text.textContent = 'READY';
+      else if (step === 5) text.textContent = 'SET';
+    } else {
+      clearInterval(interval);
+      lights.forEach(id => {
+        document.getElementById(id).classList.remove('on');
+        document.getElementById(id).classList.add('off');
+      });
+      text.textContent = 'GO!';
+      text.classList.add('go');
+      playGoSound();
+      setTimeout(() => {
+        initializeGame();
+        showScreen('gameScreen');
+      }, 1200);
+    }
+  }, 900);
+}
+
+// ============ INITIALIZE GAME ============
+function initializeGame() {
+  // Filter and shuffle questions
+  let pool = [...questionBank];
+  if (gameState.modeFilter !== 'all') {
+    const modeNum = parseInt(gameState.modeFilter);
+    pool = pool.filter(q => q.mode === modeNum);
+  }
+  // Shuffle
+  pool = pool.sort(() => Math.random() - 0.5);
+  gameState.questions = pool.slice(0, gameState.totalQuestions);
+  
+  // Reset state
+  gameState.currentTeam = 'ferrari';
+  gameState.ferrariScore = 0;
+  gameState.mclarenScore = 0;
+  gameState.ferrariCorrect = 0;
+  gameState.mclarenCorrect = 0;
+  gameState.ferrariAttempts = 0;
+  gameState.mclarenAttempts = 0;
+  gameState.ferrariPosition = 0;
+  gameState.mclarenPosition = 0;
+  gameState.currentQuestionIndex = 0;
+  gameState.isPaused = false;
+  gameState.history = [];
+  
+  updateScoreDisplay();
+  updateCarPositions();
+  loadQuestion();
+}
+
+// ============ LOAD QUESTION ============
+function loadQuestion() {
+  if (gameState.currentQuestionIndex >= gameState.questions.length) {
+    endRace();
+    return;
+  }
+  
+  const q = gameState.questions[gameState.currentQuestionIndex];
+  gameState.answered = false;
+  
+  // Update UI
+  document.getElementById('roundInfo').textContent = `ROUND ${gameState.currentQuestionIndex + 1} / ${gameState.questions.length}`;
+  document.getElementById('currentTeamTurn').textContent = `${gameState.currentTeam.toUpperCase()}'S TURN`;
+  document.getElementById('currentTeamTurn').style.color = gameState.currentTeam === 'ferrari' ? 'var(--ferrari-red)' : 'var(--mclaren-orange)';
+  
+  // Mode badge
+  const modeNames = { 1: 'MODE 1: TOOL QUIZ', 2: 'MODE 2: GUESS THE TOOL', 3: 'MODE 3: PIT STOP' };
+  document.getElementById('modeBadge').textContent = modeNames[q.mode];
+  
+  // Timer styling
+  const timerDisplay = document.getElementById('timerDisplay');
+  timerDisplay.className = 'timer-display ' + (gameState.currentTeam === 'ferrari' ? 'ferrari-timer' : 'mclaren-timer');
+  
+  // Team highlight
+  document.getElementById('ferrariScore').classList.toggle('active-turn', gameState.currentTeam === 'ferrari');
+  document.getElementById('mclarenScore').classList.toggle('active-turn', gameState.currentTeam === 'mclaren');
+  
+  // Car highlight
+  document.getElementById('carFerrari').classList.toggle('active', gameState.currentTeam === 'ferrari');
+  document.getElementById('carMclaren').classList.toggle('active', gameState.currentTeam === 'mclaren');
+  
+  // Question text
+  document.getElementById('questionText').textContent = q.q;
+  
+  // Tool visual (mode 2 & 3)
+  const toolVisual = document.getElementById('toolVisual');
+  if (q.mode === 2 || q.mode === 3) {
+    toolVisual.style.display = 'block';
+    document.getElementById('toolIcon').textContent = q.icon || '🔧';
+    document.getElementById('toolDesc').textContent = q.desc || '';
+  } else {
+    toolVisual.style.display = 'none';
+  }
+  
+  // Options
+  const grid = document.getElementById('optionsGrid');
+  grid.innerHTML = '';
+  const letters = ['A', 'B', 'C', 'D'];
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="opt-letter">${letters[i]}</span>${opt}`;
+    btn.onclick = () => selectAnswer(i);
+    grid.appendChild(btn);
+  });
+  
+  // Hide feedback & next
+  document.getElementById('feedbackBox').classList.remove('show');
+  document.getElementById('nextBtn').style.display = 'none';
+  
+  // Start timer
+  startTimer();
+}
+
+// ============ TIMER ============
+function startTimer() {
+  clearInterval(gameState.timerInterval);
+  gameState.timeLeft = gameState.timer;
+  updateTimerDisplay();
+  
+  gameState.timerInterval = setInterval(() => {
+    if (gameState.isPaused || gameState.answered) return;
+    gameState.timeLeft--;
+    updateTimerDisplay();
+    if (gameState.timeLeft <= 5 && gameState.timeLeft > 0) playTickSound();
+    if (gameState.timeLeft <= 0) {
+      clearInterval(gameState.timerInterval);
+      handleTimeout();
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  document.getElementById('timerValue').textContent = gameState.timeLeft;
+  const percent = (gameState.timeLeft / gameState.timer) * 100;
+  document.getElementById('timerFill').style.width = percent + '%';
+  const timerDisplay = document.getElementById('timerDisplay');
+  if (gameState.timeLeft <= 5) timerDisplay.classList.add('warning');
+  else timerDisplay.classList.remove('warning');
+}
+
+// ============ ANSWER HANDLING ============
+function selectAnswer(idx) {
+  if (gameState.answered || gameState.isPaused) return;
+  gameState.answered = true;
+  clearInterval(gameState.timerInterval);
+  
+  const q = gameState.questions[gameState.currentQuestionIndex];
+  const buttons = document.querySelectorAll('.option-btn');
+  buttons.forEach(b => b.disabled = true);
+  
+  const isCorrect = idx === q.answer;
+  const team = gameState.currentTeam;
+  const feedback = document.getElementById('feedbackBox');
+  
+  // Record history
+  gameState.history.push({
+    question: q.q,
+    team: team,
+    mode: q.mode,
+    options: q.options,
+    selected: idx,
+    correct: q.answer,
+    isCorrect: isCorrect,
+    points: q.points,
+    explain: q.explain
+  });
+  
+  if (team === 'ferrari') gameState.ferrariAttempts++;
+  else gameState.mclarenAttempts++;
+  
+  if (isCorrect) {
+    buttons[idx].classList.add('correct');
+    if (team === 'ferrari') {
+      gameState.ferrariScore += q.points;
+      gameState.ferrariCorrect++;
+    } else {
+      gameState.mclarenScore += q.points;
+      gameState.mclarenCorrect++;
+    }
+    feedback.className = 'feedback-box correct show';
+    feedback.innerHTML = `✅ <b>CORRECT! +${q.points} POINTS</b><br><small>${q.explain}</small>`;
+    playCorrectSound();
+    moveCar(team, q.points);
+  } else {
+    buttons[idx].classList.add('wrong');
+    buttons[q.answer].classList.add('correct');
+    feedback.className = 'feedback-box wrong show';
+    feedback.innerHTML = `❌ <b>WRONG!</b> Correct answer: <b>${q.options[q.answer]}</b><br><small>${q.explain}</small>`;
+    playWrongSound();
+  }
+  
+  updateScoreDisplay();
+  document.getElementById('nextBtn').style.display = 'inline-block';
+}
+
+function handleTimeout() {
+  if (gameState.answered) return;
+  gameState.answered = true;
+  
+  const q = gameState.questions[gameState.currentQuestionIndex];
+  const buttons = document.querySelectorAll('.option-btn');
+  buttons.forEach(b => b.disabled = true);
+  buttons[q.answer].classList.add('correct');
+  
+  const team = gameState.currentTeam;
+  if (team === 'ferrari') gameState.ferrariAttempts++;
+  else gameState.mclarenAttempts++;
+  
+  gameState.history.push({
+    question: q.q,
+    team: team,
+    mode: q.mode,
+    options: q.options,
+    selected: -1,
+    correct: q.answer,
+    isCorrect: false,
+    points: q.points,
+    explain: q.explain,
+    timeout: true
+  });
+  
+  const feedback = document.getElementById('feedbackBox');
+  feedback.className = 'feedback-box timeout show';
+  feedback.innerHTML = `⏰ <b>TIME'S UP!</b> Correct answer: <b>${q.options[q.answer]}</b><br><small>${q.explain}</small>`;
+  playWrongSound();
+  
+  document.getElementById('nextBtn').style.display = 'inline-block';
+}
+
+// ============ CAR MOVEMENT ============
+function moveCar(team, points) {
+  // Each 100 points = 10% progress. Max 1000 points = 100%
+  const progress = (points / 100) * 10;
+  if (team === 'ferrari') {
+    gameState.ferrariPosition = Math.min(100, gameState.ferrariPosition + progress);
+  } else {
+    gameState.mclarenPosition = Math.min(100, gameState.mclarenPosition + progress);
+  }
+  updateCarPositions();
+  playEngineSound();
+  
+  // Smoke effect
+  const smokeId = team === 'ferrari' ? 'smokeFerrari' : 'smokeMclaren';
+  const smoke = document.getElementById(smokeId);
+  smoke.classList.remove('show');
+  void smoke.offsetWidth;
+  smoke.classList.add('show');
+  
+  // Boost animation
+  const carId = team === 'ferrari' ? 'carFerrari' : 'carMclaren';
+  const car = document.getElementById(carId);
+  car.classList.add('boost');
+  setTimeout(() => car.classList.remove('boost'), 800);
+  
+  // Check finish
+  if (gameState.ferrariPosition >= 100 || gameState.mclarenPosition >= 100) {
+    setTimeout(() => endRace(), 1500);
+  }
+}
+
+function updateCarPositions() {
+  // Cars start at 2% (left), finish at 90%
+  const fPos = 2 + (gameState.ferrariPosition / 100) * 88;
+  const mPos = 2 + (gameState.mclarenPosition / 100) * 88;
+  document.getElementById('carFerrari').style.left = fPos + '%';
+  document.getElementById('carMclaren').style.left = mPos + '%';
+}
+
+// ============ SCORE DISPLAY ============
+function updateScoreDisplay() {
+  document.getElementById('ferrariPoints').textContent = gameState.ferrariScore;
+  document.getElementById('mclarenPoints').textContent = gameState.mclarenScore;
+}
+
+// ============ NEXT QUESTION ============
+function nextQuestion() {
+  // Determine next team
+  if (gameState.turnOrder === 'alternate') {
+    gameState.currentTeam = gameState.currentTeam === 'ferrari' ? 'mclaren' : 'ferrari';
+  } else if (gameState.turnOrder === 'ferrari') {
+    // All ferrari first, then all mclaren
+    const ferrariTurns = Math.ceil(gameState.totalQuestions / 2);
+    const ferrariDone = gameState.history.filter(h => h.team === 'ferrari').length;
+    if (ferrariDone < ferrariTurns) gameState.currentTeam = 'ferrari';
+    else gameState.currentTeam = 'mclaren';
+  } else {
+    const mclarenTurns = Math.ceil(gameState.totalQuestions / 2);
+    const mclarenDone = gameState.history.filter(h => h.team === 'mclaren').length;
+    if (mclarenDone < mclarenTurns) gameState.currentTeam = 'mclaren';
+    else gameState.currentTeam = 'ferrari';
+  }
+  
+  gameState.currentQuestionIndex++;
+  loadQuestion();
+}
+
+// ============ PAUSE ============
+function togglePause() {
+  gameState.isPaused = !gameState.isPaused;
+  if (gameState.isPaused) {
+    showModal('pauseModal');
+    document.getElementById('pauseBtn').innerHTML = '▶️ RESUME';
+  } else {
+    hideModal('pauseModal');
+    document.getElementById('pauseBtn').innerHTML = '⏸️ PAUSE';
+  }
+}
+
+// ============ RESTART / END ============
+function confirmRestart() {
+  if (confirm('🔄 Restart the race? All progress will be lost.')) {
+    clearInterval(gameState.timerInterval);
+    showScreen('countdownScreen');
+    runCountdown();
+  }
+}
+
+function confirmEnd() {
+  if (confirm('🏁 End the race now?')) {
+    clearInterval(gameState.timerInterval);
+    endRace();
+  }
+}
+
+// ============ END RACE ============
+function endRace() {
+  clearInterval(gameState.timerInterval);
+  
+  // Determine winner
+  let winner = null;
+  if (gameState.ferrariPosition > gameState.mclarenPosition) winner = 'ferrari';
+  else if (gameState.mclarenPosition > gameState.ferrariPosition) winner = 'mclaren';
+  else if (gameState.ferrariScore > gameState.mclarenScore) winner = 'ferrari';
+  else if (gameState.mclarenScore > gameState.ferrariScore) winner = 'mclaren';
+  else winner = 'tie';
+  
+  // Update podium
+  const fRank = document.getElementById('ferrariRank');
+  const mRank = document.getElementById('mclarenRank');
+  const fPodium = document.getElementById('podiumFerrari');
+  const mPodium = document.getElementById('podiumMclaren');
+  
+  fPodium.classList.remove('winner');
+  mPodium.classList.remove('winner');
+  
+  if (winner === 'ferrari') {
+    fRank.textContent = '🥇';
+    mRank.textContent = '🥈';
+    fPodium.classList.add('winner');
+    document.getElementById('championText').innerHTML = '🏆 CHAMPION: <span style="color:var(--ferrari-red)">TEAM FERRARI</span> 🏆';
+  } else if (winner === 'mclaren') {
+    fRank.textContent = '🥈';
+    mRank.textContent = '🥇';
+    mPodium.classList.add('winner');
+    document.getElementById('championText').innerHTML = '🏆 CHAMPION: <span style="color:var(--mclaren-orange)">TEAM McLAREN</span> 🏆';
+  } else {
+    fRank.textContent = '🤝';
+    mRank.textContent = '🤝';
+    document.getElementById('championText').innerHTML = '🤝 IT\'S A TIE! BOTH TEAMS ARE CHAMPIONS! 🤝';
+  }
+  
+  // Stats
+  document.getElementById('ferrariFinalPoints').textContent = gameState.ferrariScore;
+  document.getElementById('mclarenFinalPoints').textContent = gameState.mclarenScore;
+  document.getElementById('ferrariDistance').textContent = Math.round(gameState.ferrariPosition) + '%';
+  document.getElementById('mclarenDistance').textContent = Math.round(gameState.mclarenPosition) + '%';
+  document.getElementById('ferrariCorrect').textContent = `${gameState.ferrariCorrect}/${gameState.ferrariAttempts}`;
+  document.getElementById('mclarenCorrect').textContent = `${gameState.mclarenCorrect}/${gameState.mclarenAttempts}`;
+  const fAcc = gameState.ferrariAttempts > 0 ? Math.round((gameState.ferrariCorrect / gameState.ferrariAttempts) * 100) : 0;
+  const mAcc = gameState.mclarenAttempts > 0 ? Math.round((gameState.mclarenCorrect / gameState.mclarenAttempts) * 100) : 0;
+  document.getElementById('ferrariAccuracy').textContent = fAcc + '%';
+  document.getElementById('mclarenAccuracy').textContent = mAcc + '%';
+  
+  showScreen('resultScreen');
+  playVictorySound();
+  launchConfetti();
+}
+
+// ============ CONFETTI ============
+function launchConfetti() {
+  const colors = ['#dc0000', '#ff8000', '#ffd700', '#ffffff', '#00d26a'];
+  for (let i = 0; i < 80; i++) {
+    setTimeout(() => {
+      const conf = document.createElement('div');
+      conf.className = 'confetti';
+      conf.style.left = Math.random() * 100 + 'vw';
+      conf.style.background = colors[Math.floor(Math.random() * colors.length)];
+      conf.style.animationDuration = (2 + Math.random() * 3) + 's';
+      conf.style.transform = `rotate(${Math.random() * 360}deg)`;
+      if (Math.random() > 0.5) conf.style.borderRadius = '50%';
+      document.body.appendChild(conf);
+      setTimeout(() => conf.remove(), 5000);
+    }, i * 50);
+  }
+}
+
+// ============ REVIEW ============
+function showReview() {
+  const list = document.getElementById('reviewList');
+  list.innerHTML = '';
+  if (gameState.history.length === 0) {
+    list.innerHTML = '<p style="text-align:center;">No answers recorded yet.</p>';
+  } else {
+    gameState.history.forEach((h, i) => {
+      const item = document.createElement('div');
+      item.className = 'review-item ' + (h.isCorrect ? 'correct-review' : 'wrong-review');
+      const teamLabel = h.team === 'ferrari' ? '🔴 FERRARI' : '🟠 McLAREN';
+      const modeLabel = ['TOOL QUIZ', 'GUESS THE TOOL', 'PIT STOP'][h.mode - 1];
+      const selectedText = h.selected === -1 ? '<i>TIME OUT</i>' : h.options[h.selected];
+      item.innerHTML = `
+        <div class="review-q">Q${i+1} [${teamLabel} • ${modeLabel} • ${h.points}pts]</div>
+        <div style="margin:5px 0;">${h.question}</div>
+        <div class="review-a">Your answer: <b>${selectedText}</b></div>
+        <div class="review-a">Correct answer: <b style="color:#2ecc71;">${h.options[h.correct]}</b></div>
+        <div class="review-a" style="margin-top:5px; font-style:italic;">💡 ${h.explain}</div>
+      `;
+      list.appendChild(item);
+    });
+  }
+  showModal('reviewModal');
+}
+
+// ============ PLAY AGAIN / MENU ============
+function playAgain() {
+  showScreen('countdownScreen');
+  runCountdown();
+}
+function backToMenu() {
+  clearInterval(gameState.timerInterval);
+  showScreen('menuScreen');
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  // Click anywhere to init audio context (browser requirement)
+  document.body.addEventListener('click', initAudio, { once: true });
+});
+</script>
+</body>
+</html>
